@@ -20,6 +20,7 @@ else
 fi
 mount -wo remount /mnt/system
 
+tot="0"
 
 if [ "$TYPE" = "incr" ]; then
   FILES=$(tar -tjf update.tar.bz2)
@@ -42,6 +43,9 @@ if [ "$TYPE" = "incr" ]; then
     echo "headshot!"
     rm "system/$file.new"
     rm "system/$file.old"
+    tot=$(($tot + 1))
+    setprop sys.update $tot
   done <<< "$FILES"
 fi
 umount /mnt/system
+setprop sys.update false
