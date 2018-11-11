@@ -23,16 +23,10 @@ mount -wo remount /mnt/system
 tot="0"
 
 if [ "$TYPE" = "incr" ]; then
-  FILES=$(tar -tjf update.tar.bz2)
+  tar -xjf update.tar.bz2 update.files
+  FILES=$(cat update.files)
+  rm update.files
   while read -r file; do
-    if [ "${file//system\/}" = "$file" ]; then
-      continue #We're doing a metadata file - not a good idea
-    fi
-    if ! [ "${file%/}" = "$file" ]; then
-      continue #We're doing a directory - not a good idea
-    fi
-    file="${file//system\/}"
-    file="${file//\.new}"
     echo "now doing: $file"
     echo "now extracting..."
     cd /mnt
@@ -43,6 +37,27 @@ if [ "$TYPE" = "incr" ]; then
     echo "headshot!"
     rm "system/$file.new"
     rm "system/$file.old"
+    tot=$(($tot + 1))
+    setprop sys.update $tot
+  done <<< "$FILES"
+  cd /data/update
+  tar -xjf update.tar.bz2 rm.files
+  FILES=$(cat rm.files)
+  rm rm.files
+  while read -r file; do
+    echo "now doing: $file"
+    rm "/mnt/system/$file" #Theres no good way to do this... but it doesn't matter bcos it will be unlinked not deleted
+    tot=$(($tot + 1))
+    setprop sys.update $tot
+  done <<< "$FILES"
+  tar -xjf update.tar.bz2 add.files
+  FILES=$(cat add.files)
+  rm add.files
+  cd /mnt
+  while read -r file; do
+    echo "now doing: $file"
+    tar -xjf /data/update/update.tar.bz2 "system/$file.new" #Theres no good way to do this...
+    mv "system/$file.new" "system/$file"
     tot=$(($tot + 1))
     setprop sys.update $tot
   done <<< "$FILES"
