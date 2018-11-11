@@ -39,7 +39,7 @@ if [ "$TYPE" = "incr" ]; then
     tar -xjf /data/update/update.tar.bz2 "system/$file.new" #Put the new file in place
     ln "system/$file" "system/$file.old"
     echo "going in for the kill"
-    ln -f "system/$file.new" "system/$file" && mount -o bind "$PREFIX$file.old" "$PREFIX$file" || (echo "FAILED!"; exit 2) #Why can linux not do this atomically???
+    ln -f "system/$file.new" "system/$file" && mount -o bind "$PREFIX$file.old" "$PREFIX$file" || (setprop sys.update -1) #Why can linux not do this atomically???
     echo "headshot!"
     rm "system/$file.new"
     rm "system/$file.old"
