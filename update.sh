@@ -56,8 +56,7 @@ if [ "$TYPE" = "incr" ]; then
   cd /mnt
   while read -r file; do
     echo "now doing: $file"
-    tar -xjf /data/update/update.tar.bz2 "system/$file.new" #Theres no good way to do this...
-    mv "system/$file.new" "system/$file"
+    tar -xjf /data/update/update.tar.bz2 "system/$file" #Theres no good way to do this...
     tot=$(($tot + 1))
     setprop sys.update $tot
   done <<< "$FILES"
