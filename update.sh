@@ -46,7 +46,7 @@ if [ "$TYPE" = "incr" ]; then
   rm rm.files
   while read -r file; do
     echo "now doing: $file"
-    rm "/mnt/system/$file" #Theres no good way to do this... but it doesn't matter bcos it will be unlinked not deleted
+    rm -rf "/mnt/system/$file" #Theres no good way to do this... but it doesn't matter bcos it will be unlinked not deleted
     tot=$(($tot + 1))
     setprop sys.update $tot
   done <<< "$FILES"
