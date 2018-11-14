@@ -1,3 +1,3 @@
 # descendant-updater
 
-Updates for Descendant ROM
+## Don't put up with `Reboot Recovery`, Be a Descendant!
