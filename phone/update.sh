@@ -34,7 +34,6 @@ else
   mount -t "$(mount | grep -o '/dev/block/[a-zA-Z0-9]* on / type .*' | tr -s ' ' | cut -d ' ' -f 5)" -r "$(mount | grep -o '/dev/block/[a-zA-Z0-9]* on / type .*' | tr -s ' ' | cut -d ' ' -f 1)" /mnt/system
   PREFIX="/"
 fi
-mount -wo remount /mnt/system
 
 tot="0"
 
