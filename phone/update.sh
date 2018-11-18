@@ -37,6 +37,8 @@ fi
 
 tot="0"
 
+mkdir /mnt/extracttmp
+
 if [ "$TYPE" = "incr" ]; then
   tar -xjf update.tar.bz2 update.files
   FILES=$(cat update.files)
@@ -44,8 +46,10 @@ if [ "$TYPE" = "incr" ]; then
   while read -r file; do
     echo "now doing: $file"
     echo "now extracting..."
+    cd /mnt/extracttmp
+    tar -xjf /data/update/update.tar.bz2 "system/$file" #Put the new file in place
+    mv "system/$file" "/mnt/system/$file.new"
     cd /mnt
-    tar -xjf /data/update/update.tar.bz2 "system/$file.new" #Put the new file in place
     ln "system/$file" "system/$file.old"
     echo "going in for the kill"
     ln -f "system/$file.new" "system/$file" && mount -o bind "$PREFIX$file.old" "$PREFIX$file" || (setprop sys.update -1) #Why can linux not do this atomically???
