@@ -34,24 +34,45 @@ md5(){
 }
 
 list(){
-	> $tmp/common	
+	> $tmp/common
+	> $tmp/add
+	> $tmp/del
 	(cd $old; find . -type d > $tmp/old)
 	(cd $new; find . -type d > $tmp/new)
 	dif $tmp/old $tmp/new
 	cp $tmp/common $tmp/common_fld
 	> $tmp/common
+	> $tmp/upd
 	for f in $(cat $tmp/common_fld); do
 		(cd $old; find "$f" -maxdepth 1 -type f > $tmp/old)
 		(cd $new; find "$f" -maxdepth 1 -type f > $tmp/new)
 		dif $tmp/old $tmp/new
 	done
 	for m in $(cat $tmp/common); do
-		[[ "$(md5 $old/$m)" = "$(md5 $new/$m)" ]] || echo $n >> $tmp/upd
+		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && echo "$m" >> $tmp/upd
 	done
 
 }
+
+prettify(){
+> "$1".pretty
+cat $1 | while read -r a; do
+	match=0
+	temp="$a"
+	until [[ ! "$temp" =~ '/' ]] || [[ "$match" = "1" ]]; do
+		[[ $(grep -Fx "$temp" "$1".pretty) ]] && match=1
+		temp=${temp%/*}
+	done
+	[[ "$match" = "0" ]] && echo $a >> "$1".pretty
+done
+sed -i 's/\.\///' "$1".pretty
+}
+
 mkdir tmp
 tmp="$PWD/tmp"
 old=$(realpath "$1")
 new=$(realpath "$2")
 list
+for c in {add,del,upd}; do
+	prettify $tmp/$c
+done
