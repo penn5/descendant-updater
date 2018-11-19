@@ -21,10 +21,10 @@ dif(){
 		[[ $(cat $tmp/common | grep "$1") ]] || echo $1 >> $tmp/common
 	}
 	cat $1 | while read -r i; do 
-		[[ $(cat $2 | grep "$i") ]] && common $i || echo $i >> $tmp/del
+		[[ $(cat $2 | grep "$i") ]] && common $i || echo $i >> $ota/rm.files
 	done
 	cat $2 | while read -r i; do
-		[[ $(cat $1 | grep "$i") ]] && common $i || echo $i >> $tmp/add
+		[[ $(cat $1 | grep "$i") ]] && common $i || echo $i >> $ota/add.files
 	done
 }
 
@@ -35,21 +35,21 @@ md5(){
 
 list(){
 	> $tmp/common
-	> $tmp/add
-	> $tmp/del
+	> $ota/add.files
+	> $ota/rm.files
 	(cd $old; find . -type d > $tmp/old)
 	(cd $new; find . -type d > $tmp/new)
 	dif $tmp/old $tmp/new
 	cp $tmp/common $tmp/common_fld
 	> $tmp/common
-	> $tmp/upd
+	> $ota/update.files
 	for f in $(cat $tmp/common_fld); do
 		(cd $old; find "$f" -maxdepth 1 -type f > $tmp/old)
 		(cd $new; find "$f" -maxdepth 1 -type f > $tmp/new)
 		dif $tmp/old $tmp/new
 	done
 	for m in $(cat $tmp/common); do
-		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && echo "$m" >> $tmp/upd
+		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && echo "$m" >> $ota/update.files
 	done
 
 }
@@ -70,6 +70,7 @@ sed -i 's/\.\///' "$1".pretty
 
 mkdir tmp
 tmp="$PWD/tmp"
+ota="$PWD/ota"
 old=$(realpath "$1")
 new=$(realpath "$2")
 list
