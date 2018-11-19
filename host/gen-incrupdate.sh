@@ -20,7 +20,7 @@ dif(){
 	common(){
 		[[ $(cat $tmp/common | grep "$1") ]] || echo $1 >> $tmp/common
 	}
-	cat $1 | while read -r i; do 
+	cat $1 | while read -r i; do
 		[[ $(cat $2 | grep "$i") ]] && common $i || echo $i >> $ota/rm.files
 	done
 	cat $2 | while read -r i; do
@@ -51,6 +51,8 @@ list(){
 	for m in $(cat $tmp/common); do
 		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && echo "$m" >> $ota/update.files
 	done
+	for m in $(cat $ota/update.files); do
+		cp -a 
 
 }
 
