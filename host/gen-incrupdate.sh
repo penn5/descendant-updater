@@ -21,10 +21,10 @@ dif(){
 		[[ $(cat $tmp/common | grep "$1") ]] || echo $1 >> $tmp/common
 	}
 	cat $1 | while read -r i; do
-		[[ $(cat $2 | grep "$i") ]] && common $i || echo $i >> $ota/rm.files
+		[[ $(cat $2 | grep "$i") ]] && common $i || (echo $i | sed "s;./;;" >> $ota/rm.files;echo "rm: $i")
 	done
 	cat $2 | while read -r i; do
-		[[ $(cat $1 | grep "$i") ]] && common $i || echo $i >> $ota/add.files
+		[[ $(cat $1 | grep "$i") ]] && common $i || (echo $i | sed "s;./;;" >> $ota/add.files;echo "add: $i")
 	done
 }
 
@@ -49,33 +49,25 @@ list(){
 		dif $tmp/old $tmp/new
 	done
 	for m in $(cat $tmp/common); do
-		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && echo "$m" >> $ota/update.files
+		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && (echo "$m" | sed "s;./;;" >> $ota/update.files;echo "update: $m")
 	done
+	cd $new
+        mkdir $ota/system
+	find . -type d | tar --no-recursion -cpT - -f - | (cd $ota/system;tar -xpf -)
 	for m in $(cat $ota/update.files); do
-		cp -a 
-
-}
-
-prettify(){
-> "$1".pretty
-cat $1 | while read -r a; do
-	match=0
-	temp="$a"
-	until [[ ! "$temp" =~ '/' ]] || [[ "$match" = "1" ]]; do
-		[[ $(grep -Fx "$temp" "$1".pretty) ]] && match=1
-		temp=${temp%/*}
+		cp -a $new/$m $ota/system/$m
 	done
-	[[ "$match" = "0" ]] && echo $a >> "$1".pretty
-done
-sed -i 's/\.\///' "$1".pretty
+	for m in $(cat $ota/add.files); do
+		cp -a $new/$m $ota/system/$m
+	done
+
 }
 
 mkdir tmp
+mkdir ota
 tmp="$PWD/tmp"
 ota="$PWD/ota"
 old=$(realpath "$1")
 new=$(realpath "$2")
 list
-for c in {add,del,upd}; do
-	prettify $tmp/$c
-done
+cd $ota
