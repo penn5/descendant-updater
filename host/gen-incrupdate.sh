@@ -51,6 +51,9 @@ list(){
 	for m in $(cat $tmp/common); do
 		[[ "$(md5 $old/$m)" != "$(md5 $new/$m)" ]] && (echo "$m" | sed "s;./;;" >> $ota/update.files;echo "update: $m")
 	done
+
+}
+copy(){
 	cd $new
         mkdir $ota/system
 	find . -type d | tar --no-recursion -cpT - -f - | (cd $ota/system;tar -xpf -)
@@ -60,9 +63,7 @@ list(){
 	for m in $(cat $ota/add.files); do
 		cp -a $new/$m $ota/system/$m
 	done
-
 }
-
 mkdir tmp
 mkdir ota
 tmp="$PWD/tmp"
@@ -70,4 +71,8 @@ ota="$PWD/ota"
 old=$(realpath "$1")
 new=$(realpath "$2")
 list
+copy
 cd $ota
+echo -n "incr" > type
+tar -cjpf update.tar.bz2 --strip-components=1 --transform 's/.\///' .
+echo "OTA Generated at $ota/update.tar.bz2"
