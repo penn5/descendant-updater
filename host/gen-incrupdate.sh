@@ -58,9 +58,11 @@ copy(){
         mkdir $ota/system
 	find . -type d | tar --no-recursion -cpT - -f - | (cd $ota/system;tar -xpf -)
 	for m in $(cat $ota/update.files); do
+		stat -c "%a %u %g $m" $new/$m >> $ota/perms.files
 		cp -a $new/$m $ota/system/$m
 	done
 	for m in $(cat $ota/add.files); do
+		stat -c "%a %u %g $m" $new/$m >> $ota/perms.files
 		cp -a $new/$m $ota/system/$m
 	done
 }

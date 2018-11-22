@@ -1,5 +1,3 @@
-#!/system/bin/sh
-
 #
 #  Copyright (C) 2018 Penn Mackintosh
 # 
@@ -17,20 +15,8 @@
 #
 
 cd /data/update
-echo starting
-# First we determine what type of update package is being installed...
-#tar -xf update.tar.bz2 type
-echo xtracted
-#TYPE=$(cat type)
-TYPE=incr
-echo cated
-rm type
-
-echo stage 1.5
 
 AB=$(getprop ro.build.ab_update)
-
-echo stage 2
 
 if [ -z $AB ]; then
   PREFIX="/system/"
@@ -42,69 +28,79 @@ fi
 
 tot="0"
 
+TYPE=$(cat type)
+echo $TYPE
 mkdir /mnt/extracttmp
 mkdir /mnt/system
+mkdir /mnt/systembak
 
-while read -r file; do
-  mount -wo remount "$file"
-done <<< "$(mount | grep -o '/dev/block/[a-zA-Z0-9]* on /system.* type .*' | tr -s ' ' | cut -d ' ' -f 3)"
+mount -o bind /system /mnt/system #Magisk workaround; submounts are not preserved (we get a real disk image mounted here, not a ton of tmpfs's)
 
 if [ "$TYPE" = "incr" ]; then
-  export LD_LIBRARY_PATH="$PATH:/mnt/system/lib:/mnt/system/lib64"
-  export PATH="$PATH:/mnt/system/bin"
+  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/mnt/systembak/lib64"
+  export PATH="$PATH:/mnt/systembak/bin"
 #  tar -xf update.tar.bz2 update.files
+  TOTAL=$(wc -l perms.files | cut -d " " -f 1)
   FILES=$(cat update.files)
   rm update.files
   while read -r file; do
     if [[ -z $file ]]; then
       continue
     fi
-    echo "now doing: $file"
     #echo "now extracting..."
     cd /mnt/extracttmp
-#    tar -xf /data/update/update.tar.bz2 "system/$file" #Put the new file in place
-    mkdir -p "$(echo system/$file | sed 's;/[^/]*$;;')"
-    cp -a /data/update/system/$file system/$file
-    mv "system/$file" "$PREFIX$file.new"
+#    tar -xpf /data/update/update.tar.bz2 "system/$file" #Put the new file in place
+    mkdir -p "$(echo system/$file | sed 's;/[^/]*$;;')" #
+    cp -a /data/update/system/$file system/$file #
+    mod=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 1)
+    uid=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 2)
+    grp=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 3)
+    chmod $mod "system/$file"
+    chown -hP $uid "system/$file"
+    chgrp -hP $grp "system/$file"
+    mv "system/$file" "/mnt/system/$file.new"
     #echo "going in for the kill"
-    mkdir -p "$(echo /mnt/system/$file | sed 's;/[^/]*$;;')"
-    cp -a "$PREFIX$file" "/mnt/system/$file" || (echo "bakup fail!!";continue)
-    umount -l "$PREFIX$file" 2>/dev/null
-    umount -l "$PREFIX$file" 2>/dev/null
-    (ln -f "$PREFIX$file" "$PREFIX$file.old" && ln -f "$PREFIX$file.new" "$PREFIX$file" && mount -o bind "$PREFIX$file.old" "$PREFIX$file") || (echo fail;setprop sys.update -1) #Why can linux not do this atomically???
+    mkdir -p "$(echo /mnt/systembak/$file | sed 's;/[^/]*$;;')"
+    cp -a "$PREFIX$file" "/mnt/systembak/$file" || (echo "bakup fail!!";continue)
+    umount -l "/system/$file" 2>/dev/null
+    (ln -f "/mnt/system/$file.new" "/mnt/system/$file" && (restorecon -FR "$PREFIX$file" 2> /dev/null; mount -o bind "/mnt/systembak/$file" "$PREFIX$file")) || (echo fail;setprop sys.update -1;echo $file)
+    restorecon -FR "$PREFIX$file" 2> /dev/null
+    rm "/mnt/system/$file.new"
 #    echo "headshot!"
-    rm "$PREFIX$file.new"
-    rm "$PREFIX$file.old"
     tot=$(($tot + 1))
-    setprop sys.update $tot
+    setprop sys.update $tot/$TOTAL
+    getprop sys.update
   done <<< "$FILES"
   cd /data/update
 #  tar -xf update.tar.bz2 rm.files
   FILES=$(cat rm.files)
   rm rm.files
   while read -r file; do
-    echo "now doing rm: $file"
-    umount -l "$PREFIX$file" 2>/dev/null
-    umount -l "$PREFIX$file" 2>/dev/null
-    mount -wo remount "$(echo $PREFIX$file | sed 's;/[^/]*$;;')" #For magisk
-    rm -rf "$PREFIX$file" #Theres no good way to do this... but it doesn't matter bcos it will be unlinked not deleted
+    rm -rf "/mnt/system/$file" #Theres no good way to do this... but it doesn't matter bcos it will be unlinked not deleted
     tot=$(($tot + 1))
-    setprop sys.update $tot
+    setprop sys.update $tot/$TOTAL
+    getprop sys.update
   done <<< "$FILES"
   #tar -xf update.tar.bz2 add.files
   FILES=$(cat add.files)
   rm add.files
   cd /mnt/extracttmp
   while read -r file; do
-    echo "now doing add: $file"
-    mkdir -p "$(echo /mnt/system/$file | sed 's;/[^/]*$;;')"
+    mkdir -p "$(echo system/$file | sed 's;/[^/]*$;;')"
 #    tar -xf /data/update/update.tar.bz2 "system/$file" #Theres no good way to do this...
     cp -R /data/update/system/$file system/$file
-    umount -l "$PREFIX$file" 2>/dev/null
-    umount -l "$PREFIX$file" 2>/dev/null
-    mv system/$file $PREFIX$file
+    mod=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 1)
+    uid=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 2)
+    grp=$(grep "^[0-9]* [0-9]* [0-9]* $file$" /data/update/perms.files | cut -d " " -f 3)
+    chmod $mod "system/$file"
+    chown -hP $uid "system/$file"
+    chgrp -hP $grp "system/$file"
+    mv "system/$file" "/mnt/system/$file"
+    restorecon -FR "/mnt/system/$file"
     tot=$(($tot + 1))
-    setprop sys.update $tot
+    setprop sys.update $tot/$TOTAL
+    getprop sys.update
   done <<< "$FILES"
 fi
+restorecon -R /mnt/system
 setprop sys.update false
